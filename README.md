@@ -81,11 +81,6 @@ python -m pip install -r requirements.txt
 - No bubbles: check the browser console for JS errors; ensure `static/js/bubbles.js` loaded.
 - CORS/API issues when connecting to external services: configure server-side calls (do not call external APIs directly from client JS unless allowed).
 
-## Contributing
-- Fork or branch and open a pull request.
-- Keep changes small and scoped (UI tweaks, accessibility fixes, or backend integrations).
-- Add tests if you add server logic.
-
 ## License
 Add your chosen license text here (e.g., MIT) or update this file with your project license.
 
