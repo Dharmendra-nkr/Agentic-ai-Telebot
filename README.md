@@ -1,93 +1,264 @@
-# BubbleBot a Lightweight Flask Frontend
+# Agentic AI Personal Assistant 🤖
 
-BubbleBot is a minimal, attractive frontend built with Flask that provides a decorative floating-bubbles background and a centered chat card to connect a chatbot backend quickly for local testing or demos.
+An intelligent, autonomous personal assistant powered by agentic AI, accessible through Telegram. This system demonstrates advanced AI concepts including autonomous planning, tool use via MCPs (Model Context Protocols), multi-tiered memory systems, and proactive user interaction.
 
-## Features
-- Floating bubbles background implemented in `static/js/bubbles.js` and styled in `static/css/style.css`.
-- Polished, responsive chat card (`templates/index.html`) with header/avatar, message list, and input form.
-- Simple `/chat` endpoint in `app.py` that currently echoes incoming messages — ready to be replaced with real bot logic.
-- Zero build step: plain Flask app, just run Python.
+## 🌟 Features
 
-## Quick Start
+### Core Capabilities
+- **📅 Calendar Management**: Create, view, and manage calendar events with Google Calendar integration
+- **⏰ Smart Reminders**: Set one-time or recurring reminders with intelligent timing
+- **📝 Notes**: Save and retrieve information easily
+- **✅ Task Management**: Create and track tasks with priorities and due dates
+- **🧠 Memory Systems**: 
+  - Short-term memory for conversation context
+  - Long-term memory for user preferences and history
+  - Temporal memory for scheduled actions
 
-Install dependencies and run locally:
+### Agentic Behaviors
+- **🎯 Intent Understanding**: Natural language processing to understand user requests
+- **🤔 Intelligent Planning**: Multi-step action planning from single commands
+- **❓ Clarifying Questions**: Asks for missing information when needed
+- **📚 Preference Learning**: Learns and adapts to user habits over time
+- **🔔 Proactive Notifications**: Sends timely reminders and alerts
+- **🛠️ Tool Selection**: Automatically chooses the right tools for each task
 
-```powershell
-cd bubblebot
-python -m pip install -r requirements.txt
-python app.py
-# Open http://127.0.0.1:5000 in your browser
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Telegram Interface                    │
+└─────────────────────┬───────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────┐
+│                 Agent Orchestrator                       │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────────────┐  │
+│  │ Planner  │  │ Executor │  │  Memory Systems      │  │
+│  │          │  │          │  │  - Short-term        │  │
+│  │ - Intent │  │ - MCP    │  │  - Long-term         │  │
+│  │ - Entity │  │   Calls  │  │  - Temporal          │  │
+│  │ - Plan   │  │ - Results│  │                      │  │
+│  └──────────┘  └──────────┘  └──────────────────────┘  │
+└─────────────────────┬───────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────┐
+│                  MCP Framework                           │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐  │
+│  │ Calendar │  │ Reminder │  │  Notes   │  │ Tasks  │  │
+│  │   MCP    │  │   MCP    │  │   MCP    │  │  MCP   │  │
+│  └──────────┘  └──────────┘  └──────────┘  └────────┘  │
+└─────────────────────────────────────────────────────────┘
 ```
 
-The `/chat` endpoint currently echoes messages. Replace the logic in `app.py` to hook your chatbot backend.
+## 🚀 Quick Start
 
-## File Map
-- `app.py` — Flask app and `POST /chat` endpoint (echo by default).
-- `templates/index.html` — main UI template (chat card + bubble container).
-- `static/css/style.css` — styles for background, bubbles, and chat card.
-- `static/js/bubbles.js` — bubble generator & animation logic.
-- `requirements.txt` — minimal Python requirements.
-- `README.md` — this file.
+### Prerequisites
+- Python 3.10+
+- Telegram Bot Token (from [@BotFather](https://t.me/botfather))
+- OpenAI API Key or Anthropic API Key
+- PostgreSQL (optional, SQLite works for development)
 
-## How to Hook a Real Chatbot
+### Installation
 
-Replace the echo logic in `app.py`:
+1. **Clone the repository**
+```bash
+git clone <repository-url>
+cd Agentic_AI_DW
+```
 
+2. **Create virtual environment**
+```bash
+python -m venv venv
+# Windows
+venv\Scripts\activate
+# Linux/Mac
+source venv/bin/activate
+```
+
+3. **Install dependencies**
+```bash
+pip install -r requirements.txt
+```
+
+4. **Configure environment variables**
+```bash
+# Copy the example file
+copy .env.example .env
+
+# Edit .env and add your credentials:
+# - TELEGRAM_BOT_TOKEN
+# - OPENAI_API_KEY (or ANTHROPIC_API_KEY)
+# - DATABASE_URL (optional, defaults to SQLite)
+```
+
+5. **Run the application**
+```bash
+python main.py
+```
+
+The bot will start and be accessible via Telegram!
+
+## 📱 Usage Examples
+
+### Creating Events
+```
+User: "Save the date March 1st, I have a dental appointment at 8 AM"
+Bot: "I'll create a calendar event for your dental appointment on March 1st at 8 AM. 
+      Would you like me to set a reminder? If so, how long before the appointment?"
+
+User: "Yes, remind me 1 hour before"
+Bot: "✅ Done! I've created:
+     - Calendar event: Dental appointment on March 1st at 8 AM
+     - Reminder: 1 hour before (7 AM on March 1st)"
+```
+
+### Setting Reminders
+```
+User: "Remind me to call John tomorrow at 3 PM"
+Bot: "✅ I'll remind you to call John tomorrow at 3 PM"
+```
+
+### Querying Calendar
+```
+User: "What's on my calendar this week?"
+Bot: "📅 Here are your upcoming events:
+     1. Team meeting - Tomorrow at 10 AM
+     2. Dental appointment - March 1st at 8 AM
+     3. Project deadline - Friday at 5 PM"
+```
+
+## 🛠️ Configuration
+
+### Environment Variables
+
+Key configuration options in `.env`:
+
+```bash
+# LLM Provider (openai, anthropic)
+LLM_PROVIDER=openai
+OPENAI_API_KEY=your_key_here
+
+# Database
+DATABASE_URL=sqlite+aiosqlite:///./agentic_ai.db
+
+# Telegram
+TELEGRAM_BOT_TOKEN=your_bot_token
+
+# Features
+ENABLE_CLARIFYING_QUESTIONS=True
+ENABLE_PROACTIVE_SUGGESTIONS=True
+```
+
+### Database Setup
+
+**SQLite (Default - No setup needed)**
+```bash
+# Automatically creates agentic_ai.db on first run
+```
+
+**PostgreSQL (Production)**
+```bash
+# Install PostgreSQL and create database
+createdb agentic_ai_db
+
+# Update .env
+DATABASE_URL=postgresql://user:password@localhost:5432/agentic_ai_db
+```
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run with coverage
+pytest tests/ --cov=. --cov-report=html
+
+# Run specific test file
+pytest tests/test_agent.py -v
+```
+
+## 📦 Project Structure
+
+```
+Agentic_AI_DW/
+├── agent/              # Agent core (orchestrator, planner, executor)
+├── mcps/               # Model Context Protocol tools
+├── memory/             # Memory systems (short-term, long-term, temporal)
+├── telegram_bot/       # Telegram bot interface
+├── scheduler/          # Background task scheduler
+├── utils/              # Utilities (logging, NLP)
+├── tests/              # Test suite
+├── main.py             # Application entry point
+├── config.py           # Configuration management
+└── requirements.txt    # Dependencies
+```
+
+## 🔌 Adding New MCPs
+
+The system uses a plug-and-play MCP architecture. To add a new tool:
+
+1. **Create MCP class** (inherit from `BaseMCP`)
 ```python
-# in chat() handler
-data = request.get_json(silent=True) or {}
-message = data.get('message', '')
-# TODO: call your bot here (local model, OpenAI, etc.)
-reply = your_bot_reply_function(message)
-return jsonify({'reply': reply})
+from mcps.base import BaseMCP, MCPInput, MCPOutput, MCPStatus
+
+class MyMCP(BaseMCP):
+    async def execute(self, input_data: MCPInput, **kwargs) -> MCPOutput:
+        # Your implementation
+        pass
+    
+    def get_capabilities(self) -> List[MCPCapability]:
+        # Define capabilities
+        pass
 ```
 
-Example (pseudocode for an external API):
-
+2. **Register the MCP**
 ```python
-import requests
-def your_bot_reply_function(message):
-	resp = requests.post("https://api.example.com/generate", json={"prompt": message, "key": "API_KEY"})
-	return resp.json().get("reply","(no reply)")
+from mcps.registry import register_mcp
+register_mcp(MyMCP(db))
 ```
 
-Use environment variables for secrets and never commit API keys.
+## 🎓 Research & Academic Use
 
-## Customization Ideas
-- Bubble density/speed: tweak values in `static/js/bubbles.js`.
-- Theme colors: edit `:root` variables in `static/css/style.css`.
-- Message formatting: enhance the client JS to support markdown, timestamps, avatars.
-- Persistence: add a server-side message store (SQLite) if you need history across sessions.
+This project demonstrates key agentic AI concepts suitable for research:
 
-## Development Tips
-- Only enable Flask debug locally: `app.run(debug=True)` — remove or set to `False` for production.
-- Use a virtual environment:
+- **Autonomy**: Self-directed planning and execution
+- **Tool Use**: Dynamic MCP selection and orchestration
+- **Memory Architecture**: Multi-tiered memory (short/long/temporal)
+- **Proactive Behavior**: Scheduled and context-aware engagement
+- **Natural Language Understanding**: Intent and entity extraction
+- **Graceful Degradation**: Error handling and recovery
 
-```powershell
-python -m venv .venv
-.venv\\Scripts\\Activate
-python -m pip install -r requirements.txt
-```
+## 🤝 Contributing
 
-- To test changes quickly, refresh the browser or use devtools to throttle CPU and test bubble performance.
+Contributions are welcome! Areas for enhancement:
 
-## Deploy Notes
-- Use a WSGI server (Gunicorn/Waitress) behind a reverse proxy for production.
-- Serve static files from a CDN or web server for scale.
-- Ensure `DEBUG` is disabled and environment variables are set securely.
+- Additional MCPs (Email, Weather, News, etc.)
+- Advanced NLP with spaCy
+- Voice message support
+- Multi-language support
+- Web dashboard
+- Analytics and insights
 
-## Troubleshooting
-- Blank page or 404: confirm `app.py` is running and you opened the correct URL.
-- No bubbles: check the browser console for JS errors; ensure `static/js/bubbles.js` loaded.
-- CORS/API issues when connecting to external services: configure server-side calls (do not call external APIs directly from client JS unless allowed).
+## 📄 License
 
-## License
-Add your chosen license text here (e.g., MIT) or update this file with your project license.
+MIT License - feel free to use for personal or commercial projects.
+
+## 🙏 Acknowledgments
+
+Built with:
+- FastAPI
+- python-telegram-bot
+- OpenAI / Anthropic
+- SQLAlchemy
+- APScheduler
+
+## 📞 Support
+
+For issues or questions:
+- Open an issue on GitHub
+- Check the documentation
+- Review example conversations
 
 ---
 
-If you want, I can also:
-- Add an example integration to `app.py` for OpenAI/Anthropic/local model (scaffold environment variable usage).
-- Commit and push this update to `main` and open a pull request for you.
-
-Tell me which of the above you'd like next.
+**Made with ❤️ for the agentic AI community**
