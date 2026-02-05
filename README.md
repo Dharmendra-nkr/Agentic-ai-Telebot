@@ -1,77 +1,37 @@
-# Agentic AI Personal Assistant 🤖
+# Agentic AI Telebot
 
-An intelligent, autonomous personal assistant powered by agentic AI, accessible through Telegram. This system demonstrates advanced AI concepts including autonomous planning, tool use via MCPs (Model Context Protocols), multi-tiered memory systems, and proactive user interaction.
+An intelligent Telegram bot powered by Groq LLM that manages your calendar, reminders, notes, and tasks with natural language processing.
 
 ## 🌟 Features
 
-### Core Capabilities
-- **📅 Calendar Management**: Create, view, and manage calendar events with Google Calendar integration
-- **⏰ Smart Reminders**: Set one-time or recurring reminders with intelligent timing
-- **📝 Notes**: Save and retrieve information easily
-- **✅ Task Management**: Create and track tasks with priorities and due dates
-- **🧠 Memory Systems**: 
-  - Short-term memory for conversation context
-  - Long-term memory for user preferences and history
-  - Temporal memory for scheduled actions
-
-### Agentic Behaviors
-- **🎯 Intent Understanding**: Natural language processing to understand user requests
-- **🤔 Intelligent Planning**: Multi-step action planning from single commands
-- **❓ Clarifying Questions**: Asks for missing information when needed
-- **📚 Preference Learning**: Learns and adapts to user habits over time
-- **🔔 Proactive Notifications**: Sends timely reminders and alerts
-- **🛠️ Tool Selection**: Automatically chooses the right tools for each task
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Telegram Interface                    │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────────┐
-│                 Agent Orchestrator                       │
-│  ┌──────────┐  ┌──────────┐  ┌──────────────────────┐  │
-│  │ Planner  │  │ Executor │  │  Memory Systems      │  │
-│  │          │  │          │  │  - Short-term        │  │
-│  │ - Intent │  │ - MCP    │  │  - Long-term         │  │
-│  │ - Entity │  │   Calls  │  │  - Temporal          │  │
-│  │ - Plan   │  │ - Results│  │                      │  │
-│  └──────────┘  └──────────┘  └──────────────────────┘  │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────────┐
-│                  MCP Framework                           │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐  │
-│  │ Calendar │  │ Reminder │  │  Notes   │  │ Tasks  │  │
-│  │   MCP    │  │   MCP    │  │   MCP    │  │  MCP   │  │
-│  └──────────┘  └──────────┘  └──────────┘  └────────┘  │
-└─────────────────────────────────────────────────────────┘
-```
+- **🤖 AI-Powered Agent**: Uses Groq's Llama 3.3 70B for intelligent conversation
+- **📅 Calendar Management**: Create and manage events with natural language
+- **⏰ Smart Reminders**: Set reminders with relative time ("in 2 minutes", "in 1 hour")
+- **📝 Notes & Tasks**: Organize your thoughts and to-dos
+- **🧠 Memory System**: Learns your preferences over time
+- **⚡ APScheduler Integration**: Reliable reminder notifications
 
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Python 3.10+
-- Telegram Bot Token (from [@BotFather](https://t.me/botfather))
-- OpenAI API Key or Anthropic API Key
-- PostgreSQL (optional, SQLite works for development)
+- Telegram Bot Token
+- Groq API Key
 
 ### Installation
 
 1. **Clone the repository**
 ```bash
-git clone <repository-url>
-cd Agentic_AI_DW
+git clone https://github.com/Dharmendra-nkr/Agentic-ai-Telebot.git
+cd Agentic-ai-Telebot
 ```
 
 2. **Create virtual environment**
 ```bash
 python -m venv venv
-# Windows
-venv\Scripts\activate
-# Linux/Mac
-source venv/bin/activate
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # Linux/Mac
 ```
 
 3. **Install dependencies**
@@ -79,186 +39,91 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-4. **Configure environment variables**
+4. **Configure environment**
 ```bash
-# Copy the example file
-copy .env.example .env
-
-# Edit .env and add your credentials:
+cp .env.example .env
+# Edit .env with your credentials:
 # - TELEGRAM_BOT_TOKEN
-# - OPENAI_API_KEY (or ANTHROPIC_API_KEY)
-# - DATABASE_URL (optional, defaults to SQLite)
+# - GROQ_API_KEY
+# - ALLOWED_USER_IDS
 ```
 
-5. **Run the application**
+5. **Run the bot**
 ```bash
 python main.py
 ```
 
-The bot will start and be accessible via Telegram!
+## 📖 Usage Examples
 
-## 📱 Usage Examples
-
-### Creating Events
+### Reminders
 ```
-User: "Save the date March 1st, I have a dental appointment at 8 AM"
-Bot: "I'll create a calendar event for your dental appointment on March 1st at 8 AM. 
-      Would you like me to set a reminder? If so, how long before the appointment?"
-
-User: "Yes, remind me 1 hour before"
-Bot: "✅ Done! I've created:
-     - Calendar event: Dental appointment on March 1st at 8 AM
-     - Reminder: 1 hour before (7 AM on March 1st)"
+"Remind me to drink water in 5 minutes"
+"Remind me for meeting in 1 hour"
+"Set a reminder for lunch in 30 minutes"
 ```
 
-### Setting Reminders
+### Calendar Events
 ```
-User: "Remind me to call John tomorrow at 3 PM"
-Bot: "✅ I'll remind you to call John tomorrow at 3 PM"
-```
-
-### Querying Calendar
-```
-User: "What's on my calendar this week?"
-Bot: "📅 Here are your upcoming events:
-     1. Team meeting - Tomorrow at 10 AM
-     2. Dental appointment - March 1st at 8 AM
-     3. Project deadline - Friday at 5 PM"
+"Schedule a meeting tomorrow at 3 PM"
+"Create an event for dinner on Friday at 7 PM"
 ```
 
-## 🛠️ Configuration
-
-### Environment Variables
-
-Key configuration options in `.env`:
-
-```bash
-# LLM Provider (openai, anthropic)
-LLM_PROVIDER=openai
-OPENAI_API_KEY=your_key_here
-
-# Database
-DATABASE_URL=sqlite+aiosqlite:///./agentic_ai.db
-
-# Telegram
-TELEGRAM_BOT_TOKEN=your_bot_token
-
-# Features
-ENABLE_CLARIFYING_QUESTIONS=True
-ENABLE_PROACTIVE_SUGGESTIONS=True
+### Notes & Tasks
+```
+"Note: Buy groceries"
+"Add task: Complete project report"
 ```
 
-### Database Setup
-
-**SQLite (Default - No setup needed)**
-```bash
-# Automatically creates agentic_ai.db on first run
-```
-
-**PostgreSQL (Production)**
-```bash
-# Install PostgreSQL and create database
-createdb agentic_ai_db
-
-# Update .env
-DATABASE_URL=postgresql://user:password@localhost:5432/agentic_ai_db
-```
-
-## 🧪 Testing
-
-```bash
-# Run all tests
-pytest tests/ -v
-
-# Run with coverage
-pytest tests/ --cov=. --cov-report=html
-
-# Run specific test file
-pytest tests/test_agent.py -v
-```
-
-## 📦 Project Structure
+## 🏗️ Architecture
 
 ```
-Agentic_AI_DW/
-├── agent/              # Agent core (orchestrator, planner, executor)
-├── mcps/               # Model Context Protocol tools
-├── memory/             # Memory systems (short-term, long-term, temporal)
-├── telegram_bot/       # Telegram bot interface
-├── scheduler/          # Background task scheduler
-├── utils/              # Utilities (logging, NLP)
-├── tests/              # Test suite
-├── main.py             # Application entry point
-├── config.py           # Configuration management
-└── requirements.txt    # Dependencies
+├── agent/              # AI agent components (planner, executor, orchestrator)
+├── mcps/              # Microservice Communication Patterns (calendar, reminder)
+├── memory/            # Short-term, long-term, and temporal memory
+├── scheduler/         # APScheduler for reminder notifications
+├── telegram_bot/      # Telegram bot integration
+├── utils/             # NLP utilities and logging
+└── main.py           # Application entry point
 ```
 
-## 🔌 Adding New MCPs
+## 🔧 Configuration
 
-The system uses a plug-and-play MCP architecture. To add a new tool:
+See [SETUP.md](SETUP.md) for detailed setup instructions.
 
-1. **Create MCP class** (inherit from `BaseMCP`)
-```python
-from mcps.base import BaseMCP, MCPInput, MCPOutput, MCPStatus
+See [GROQ_SETUP.md](GROQ_SETUP.md) for Groq API configuration.
 
-class MyMCP(BaseMCP):
-    async def execute(self, input_data: MCPInput, **kwargs) -> MCPOutput:
-        # Your implementation
-        pass
-    
-    def get_capabilities(self) -> List[MCPCapability]:
-        # Define capabilities
-        pass
-```
+## 📚 Documentation
 
-2. **Register the MCP**
-```python
-from mcps.registry import register_mcp
-register_mcp(MyMCP(db))
-```
+- [Architecture Overview](ARCHITECTURE.md)
+- [Groq Integration](GROQ_INTEGRATION.md)
+- [Quick Start Guide](QUICKSTART_GROQ.md)
 
-## 🎓 Research & Academic Use
+## 🛠️ Tech Stack
 
-This project demonstrates key agentic AI concepts suitable for research:
+- **LLM**: Groq (Llama 3.3 70B)
+- **Framework**: FastAPI + python-telegram-bot
+- **Database**: SQLite with SQLAlchemy
+- **Scheduler**: APScheduler
+- **NLP**: dateparser, dateutil
 
-- **Autonomy**: Self-directed planning and execution
-- **Tool Use**: Dynamic MCP selection and orchestration
-- **Memory Architecture**: Multi-tiered memory (short/long/temporal)
-- **Proactive Behavior**: Scheduled and context-aware engagement
-- **Natural Language Understanding**: Intent and entity extraction
-- **Graceful Degradation**: Error handling and recovery
+## 🔐 Security
+
+- Environment variables for sensitive data
+- User ID whitelist for access control
+- `.gitignore` configured to exclude secrets
+
+## 📝 License
+
+MIT License
+
+## 👨‍💻 Author
+
+Dharmendra
 
 ## 🤝 Contributing
 
-Contributions are welcome! Areas for enhancement:
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-- Additional MCPs (Email, Weather, News, etc.)
-- Advanced NLP with spaCy
-- Voice message support
-- Multi-language support
-- Web dashboard
-- Analytics and insights
+## 📧 Support
 
-## 📄 License
-
-MIT License - feel free to use for personal or commercial projects.
-
-## 🙏 Acknowledgments
-
-Built with:
-- FastAPI
-- python-telegram-bot
-- OpenAI / Anthropic
-- SQLAlchemy
-- APScheduler
-
-## 📞 Support
-
-For issues or questions:
-- Open an issue on GitHub
-- Check the documentation
-- Review example conversations
-
----
-
-**Made with ❤️ for the agentic AI community**
+For issues and questions, please open an issue on GitHub.
