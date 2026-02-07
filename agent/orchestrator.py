@@ -114,7 +114,7 @@ class AgentOrchestrator:
                 return response
             
             # Step 4: Execute plan
-            result = await self.executor.execute_plan(plan, user.id)
+            result = await self.executor.execute_plan(plan, user.id, telegram_id=telegram_id)
             
             # Step 5: Generate natural language response
             response = await self._generate_response(

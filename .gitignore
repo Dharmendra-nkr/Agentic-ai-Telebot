@@ -101,3 +101,9 @@ dmypy.json
 *.swp
 temp/
 tmp/
+
+# Credentials and Secrets
+credentials/
+*.pickle
+google_credentials.json
+token_*.pickle

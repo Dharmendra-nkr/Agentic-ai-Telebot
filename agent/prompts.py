@@ -126,23 +126,31 @@ def get_entity_extraction_prompt(message: str, intent: str) -> str:
     Returns:
         Entity extraction prompt
     """
+    from datetime import datetime
+    current_datetime = datetime.now()
+    current_date_str = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
+    current_year = current_datetime.year
+    
     return f"""Extract relevant entities from the following user message.
+
+IMPORTANT: Today's date and time is {current_date_str}. The current year is {current_year}.
+When parsing dates, use {current_year} as the year unless explicitly stated otherwise.
 
 Intent: {intent}
 Message: "{message}"
 
 Extract and return a JSON object with these fields (set to null if not found):
 - title: Event/reminder/task title
-- datetime: ISO 8601 datetime string
+- datetime: ISO 8601 datetime string (use year {current_year} for relative dates like "tomorrow", "next week", etc.)
 - duration: Duration in minutes
 - location: Location (for events)
 - description: Additional details
 - reminder_before: How long before to remind (in minutes)
 
-Example output:
+Example output for a message on {current_date_str}:
 {{
   "title": "Dentist appointment",
-  "datetime": "2026-03-01T08:00:00",
+  "datetime": "{current_year}-03-01T08:00:00",
   "duration": 60,
   "location": null,
   "description": null,

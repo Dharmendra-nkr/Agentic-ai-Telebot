@@ -56,13 +56,14 @@ class AgentExecutor:
         
         logger.info("agent_executor_initialized", registered_mcps=len(self.registry))
     
-    async def execute_plan(self, plan: Plan, user_id: int) -> ExecutionResult:
+    async def execute_plan(self, plan: Plan, user_id: int, telegram_id: int = None) -> ExecutionResult:
         """
         Execute a plan by running all steps.
         
         Args:
             plan: Plan to execute
             user_id: User ID for context
+            telegram_id: Telegram user ID for external integrations
             
         Returns:
             ExecutionResult with aggregated results
@@ -80,7 +81,7 @@ class AgentExecutor:
         for step in plan.steps:
             try:
                 logger.info("executing_step", step=step["step"], action=step["action"])
-                result = await self._execute_step(step, user_id)
+                result = await self._execute_step(step, user_id, telegram_id=telegram_id)
                 results.append(result)
                 
                 if result.status == MCPStatus.FAILURE:
@@ -103,13 +104,14 @@ class AgentExecutor:
             errors=errors
         )
     
-    async def _execute_step(self, step: Dict[str, Any], user_id: int) -> MCPOutput:
+    async def _execute_step(self, step: Dict[str, Any], user_id: int, telegram_id: int = None) -> MCPOutput:
         """
         Execute a single step.
         
         Args:
             step: Step definition
             user_id: User ID
+            telegram_id: Telegram user ID for external integrations
             
         Returns:
             MCPOutput from the MCP
@@ -138,8 +140,8 @@ class AgentExecutor:
                 error="Unknown tool"
             )
         
-        # Execute with retry
-        result = await mcp.execute_with_retry(input_data, user_id=user_id, max_retries=2)
+        # Execute with retry, passing telegram_id for external integrations
+        result = await mcp.execute_with_retry(input_data, user_id=user_id, telegram_id=telegram_id, max_retries=2)
         
         return result
     

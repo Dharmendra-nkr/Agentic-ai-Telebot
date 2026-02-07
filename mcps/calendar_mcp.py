@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mcps.base import BaseMCP, MCPInput, MCPOutput, MCPStatus, MCPCapability
 from memory.long_term import LongTermMemory
 from utils.logger import get_logger
-
+from utils.google_calendar_helper import get_google_calendar_client
 logger = get_logger(__name__)
 
 
@@ -49,14 +49,14 @@ class CalendarMCP(BaseMCP):
         Args:
             input_data: Calendar operation parameters
             user_id: User ID
-            **kwargs: Additional context
+            **kwargs: Additional context (including telegram_id)
             
         Returns:
             MCPOutput with operation results
         """
         try:
             if input_data.action == "create_event":
-                return await self._create_event(input_data, user_id)
+                return await self._create_event(input_data, user_id, **kwargs)
             elif input_data.action == "list_events":
                 return await self._list_events(input_data, user_id)
             elif input_data.action == "update_event":
@@ -78,7 +78,7 @@ class CalendarMCP(BaseMCP):
                 error=str(e)
             )
     
-    async def _create_event(self, input_data: CalendarInput, user_id: int) -> MCPOutput:
+    async def _create_event(self, input_data: CalendarInput, user_id: int, **kwargs) -> MCPOutput:
         """Create a new calendar event."""
         if not input_data.title or not input_data.start_time:
             return MCPOutput(
@@ -100,17 +100,71 @@ class CalendarMCP(BaseMCP):
             location=input_data.location
         )
         
-        # TODO: Sync with Google Calendar
-        # google_event = await self._sync_to_google_calendar(event)
+        # Sync with Google Calendar
+        google_event_id = None
+        google_sync_status = "not_synced"
+        
+        # Extract telegram_id from kwargs (passed by executor)
+        telegram_id = kwargs.get('telegram_id', user_id)
+        
+        try:
+            google_client = get_google_calendar_client(telegram_id)
+            
+            # Check if user is authenticated
+            if google_client.is_authenticated():
+                google_event = google_client.create_event(
+                    title=input_data.title,
+                    start_time=input_data.start_time,
+                    end_time=end_time,
+                    description=input_data.description,
+                    location=input_data.location
+                )
+                
+                if google_event:
+                    google_event_id = google_event.get('id')
+                    google_sync_status = "synced"
+                    logger.info(
+                        "event_synced_to_google",
+                        event_id=event.id,
+                        google_event_id=google_event_id,
+                        telegram_id=telegram_id
+                    )
+                else:
+                    google_sync_status = "sync_failed"
+                    logger.warning("google_event_creation_failed", event_id=event.id, telegram_id=telegram_id)
+            else:
+                # User needs to authenticate first
+                google_sync_status = "auth_required"
+                logger.info("google_auth_required", telegram_id=telegram_id)
+                
+        except Exception as e:
+            google_sync_status = "sync_error"
+            logger.warning(
+                "google_sync_exception",
+                error=str(e),
+                event_id=event.id,
+                telegram_id=telegram_id
+            )
+        
+        # Prepare response message
+        message = f"Created event: {input_data.title}"
+        if google_sync_status == "synced":
+            message += " (synced to Google Calendar)"
+        elif google_sync_status == "auth_required":
+            message += " (Google Calendar sync requires authentication - run authentication flow)"
+        elif google_sync_status in ["sync_failed", "sync_error"]:
+            message += " (saved locally, Google Calendar sync failed)"
         
         return MCPOutput(
             status=MCPStatus.SUCCESS,
-            message=f"Created event: {input_data.title}",
+            message=message,
             data={
                 'event_id': event.id,
                 'title': event.title,
                 'start_time': event.start_time.isoformat(),
-                'end_time': event.end_time.isoformat()
+                'end_time': event.end_time.isoformat(),
+                'google_event_id': google_event_id,
+                'google_sync_status': google_sync_status
             }
         )
     
