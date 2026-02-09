@@ -112,9 +112,19 @@ Just talk to me naturally - I'll understand! 😊"""
                     message=message_text
                 )
                 
-                # Send response
-                await update.message.reply_text(response)
-                logger.info("sent_response", user_id=user.id, response_length=len(response))
+                # Send response - check if it's an image file
+                if response.startswith("/") and (response.endswith(".png") or response.endswith(".jpg") or response.endswith(".jpeg")):
+                    # It's a file path, send as photo
+                    try:
+                        with open(response, 'rb') as photo_file:
+                            await update.message.reply_photo(photo=photo_file, caption="Screenshot captured")
+                            logger.info("sent_photo", user_id=user.id, photo=response)
+                    except FileNotFoundError:
+                        await update.message.reply_text(f"Screenshot saved but could not be sent: {response}")
+                else:
+                    # Regular text response
+                    await update.message.reply_text(response)
+                    logger.info("sent_response", user_id=user.id, response_length=len(response))
                 break
         
         except Exception as e:

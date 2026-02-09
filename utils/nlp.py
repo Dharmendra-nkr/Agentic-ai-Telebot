@@ -97,6 +97,10 @@ class IntentExtractor:
         'query_events': ['what', 'when', 'show', 'list', 'upcoming'],
         'cancel': ['cancel', 'delete', 'remove'],
         'update': ['change', 'update', 'modify', 'reschedule'],
+        'browser_navigation': ['navigate', 'go to', 'visit', 'open', 'browse', 'access', 'surf'],
+        'browser_extract': ['extract', 'scrape', 'get', 'find', 'pull', 'fetch', 'collect data'],
+        'browser_screenshot': ['screenshot', 'capture', 'snap', 'take a picture', 'snap a photo'],
+        'browser_interaction': ['click', 'type', 'fill', 'submit', 'scroll', 'search'],
     }
     
     def extract_intent(self, text: str) -> str:
