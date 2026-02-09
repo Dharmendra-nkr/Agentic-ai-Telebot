@@ -11,6 +11,7 @@ from mcps.calendar_mcp import CalendarMCP, CalendarInput
 from mcps.reminder_mcp import ReminderMCP, ReminderInput
 from mcps.brave_search_mcp import BraveSearchMCP, BraveSearchInput
 from mcps.browserbase_mcp import BrowserbaseMCP, BrowserbaseInput
+from mcps.file_storage_mcp import FileStorageMCP, FileStorageInput
 from agent.planner import Plan
 from config import settings
 from utils.logger import get_logger
@@ -65,6 +66,9 @@ class AgentExecutor:
             self.browserbase_mcp = BrowserbaseMCP(api_key=settings.browserbase_api_key)
             logger.info("browserbase_mcp_enabled")
         
+        # Initialize File Storage MCP
+        self.file_storage_mcp = FileStorageMCP()
+        
         # Register MCPs
         self.registry.register(self.calendar_mcp)
         self.registry.register(self.reminder_mcp)
@@ -72,6 +76,7 @@ class AgentExecutor:
             self.registry.register(self.brave_search_mcp)
         if self.browserbase_mcp:
             self.registry.register(self.browserbase_mcp)
+        self.registry.register(self.file_storage_mcp)
         
         logger.info("agent_executor_initialized", registered_mcps=len(self.registry.list_mcps()))
     
@@ -193,6 +198,8 @@ class AgentExecutor:
             input_data = BraveSearchInput(**parameters)
         elif tool_name == "BrowserbaseMCP":
             input_data = BrowserbaseInput(**parameters)
+        elif tool_name == "FileStorageMCP":
+            input_data = FileStorageInput(**parameters)
         else:
             return MCPOutput(
                 status=MCPStatus.FAILURE,

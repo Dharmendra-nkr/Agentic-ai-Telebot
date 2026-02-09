@@ -4,6 +4,7 @@ from .base import BaseMCP, MCPInput, MCPOutput, MCPStatus, MCPCapability
 from .registry import MCPRegistry, get_registry, register_mcp, get_mcp
 from .reminder_mcp import ReminderMCP, ReminderInput
 from .calendar_mcp import CalendarMCP, CalendarInput
+from .file_storage_mcp import FileStorageMCP, FileStorageInput
 
 __all__ = [
     # Base classes
@@ -13,4 +14,5 @@ __all__ = [
     # MCPs
     'ReminderMCP', 'ReminderInput',
     'CalendarMCP', 'CalendarInput',
+    'FileStorageMCP', 'FileStorageInput',
 ]

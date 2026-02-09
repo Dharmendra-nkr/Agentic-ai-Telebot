@@ -225,5 +225,20 @@ EXAMPLE_CONVERSATIONS = [
         "user": "What's on my calendar tomorrow?",
         "assistant_thought": "User wants to query upcoming events. Need to use CalendarMCP to list events.",
         "assistant_response": "Let me check your calendar for tomorrow..."
+    },
+    {
+        "user": "Upload my resume to Google Drive",
+        "assistant_thought": "User wants to upload a file. I need to know the file path. Ask for clarification.",
+        "assistant_response": "I can help you upload your resume to Google Drive. Could you provide the path to your resume file? For example: C:\\Documents\\resume.pdf"
+    },
+    {
+        "user": "Upload C:\\Users\\John\\Documents\\resume.pdf",
+        "assistant_thought": "User provided file path. I can now upload using FileStorageMCP.",
+        "assistant_response": "✅ Done! I've uploaded your resume to Google Drive. Here's the shareable link: https://drive.google.com/file/d/[file_id]/view"
+    },
+    {
+        "user": "Share my presentation with john@example.com",
+        "assistant_thought": "User wants to share a file. I need the file ID or name to identify which file to share.",
+        "assistant_response": "I can share your presentation with john@example.com. Which presentation would you like to share? (You can give me the file name, or I can list your recent uploads)"
     }
 ]
