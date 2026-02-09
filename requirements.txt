@@ -35,6 +35,7 @@ structlog==24.4.0
 # Utilities
 python-dotenv==1.0.1
 httpx==0.27.2
+aiohttp==3.9.1
 
 # Testing (Optional)
 pytest==8.3.3

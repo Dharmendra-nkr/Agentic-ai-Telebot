@@ -65,6 +65,14 @@ class Settings(BaseSettings):
     google_redirect_uri: str = Field(default="http://localhost:8000/auth/google/callback")
     google_credentials_file: str = Field(default="credentials/google_credentials.json")
     
+    # Brave Search API
+    brave_search_api_key: Optional[str] = Field(default=None, description="Brave Search API key")
+    enable_brave_search: bool = Field(default=True, description="Enable Brave Search MCP")
+    
+    # Browserbase API
+    browserbase_api_key: Optional[str] = Field(default=None, description="Browserbase API key")
+    enable_browserbase: bool = Field(default=True, description="Enable Browserbase MCP")
+    
     # Scheduler Configuration
     scheduler_timezone: str = Field(default="Asia/Kolkata")
     scheduler_job_store: str = Field(default="sqlalchemy")
