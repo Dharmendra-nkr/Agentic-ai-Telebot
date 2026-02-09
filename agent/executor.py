@@ -9,7 +9,10 @@ from mcps.registry import get_registry
 from mcps.base import MCPOutput, MCPStatus
 from mcps.calendar_mcp import CalendarMCP, CalendarInput
 from mcps.reminder_mcp import ReminderMCP, ReminderInput
+from mcps.brave_search_mcp import BraveSearchMCP, BraveSearchInput
+from mcps.browserbase_mcp import BrowserbaseMCP, BrowserbaseInput
 from agent.planner import Plan
+from config import settings
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -50,11 +53,27 @@ class AgentExecutor:
         self.calendar_mcp = CalendarMCP(db)
         self.reminder_mcp = ReminderMCP(db, scheduler=scheduler)
         
+        # Initialize Brave Search MCP if enabled
+        self.brave_search_mcp = None
+        if settings.enable_brave_search and settings.brave_search_api_key:
+            self.brave_search_mcp = BraveSearchMCP(api_key=settings.brave_search_api_key)
+            logger.info("brave_search_mcp_enabled")
+        
+        # Initialize Browserbase MCP if enabled
+        self.browserbase_mcp = None
+        if settings.enable_browserbase and settings.browserbase_api_key:
+            self.browserbase_mcp = BrowserbaseMCP(api_key=settings.browserbase_api_key)
+            logger.info("browserbase_mcp_enabled")
+        
         # Register MCPs
         self.registry.register(self.calendar_mcp)
         self.registry.register(self.reminder_mcp)
+        if self.brave_search_mcp:
+            self.registry.register(self.brave_search_mcp)
+        if self.browserbase_mcp:
+            self.registry.register(self.browserbase_mcp)
         
-        logger.info("agent_executor_initialized", registered_mcps=len(self.registry))
+        logger.info("agent_executor_initialized", registered_mcps=len(self.registry.list_mcps()))
     
     async def execute_plan(self, plan: Plan, user_id: int, telegram_id: int = None) -> ExecutionResult:
         """
@@ -77,12 +96,27 @@ class AgentExecutor:
         
         results = []
         errors = []
+        context = {}  # Store data between steps (e.g., session_id)
         
         for step in plan.steps:
             try:
                 logger.info("executing_step", step=step["step"], action=step["action"])
-                result = await self._execute_step(step, user_id, telegram_id=telegram_id)
+                result = await self._execute_step(step, user_id, telegram_id=telegram_id, context=context)
                 results.append(result)
+                
+                # Store session_id or other relevant data for next steps
+                if result.status == MCPStatus.SUCCESS:
+                    # Check data for session_id
+                    if result.data and isinstance(result.data, dict):
+                        if "session_id" in result.data:
+                            context["session_id"] = result.data["session_id"]
+                        if "data" in result.data and isinstance(result.data["data"], dict):
+                            context.update(result.data["data"])
+                    
+                    # Also check metadata
+                    if result.metadata and isinstance(result.metadata, dict):
+                        if "session_id" in result.metadata:
+                            context["session_id"] = result.metadata["session_id"]
                 
                 if result.status == MCPStatus.FAILURE:
                     errors.append(f"Step {step['step']} failed: {result.error}")
@@ -104,7 +138,7 @@ class AgentExecutor:
             errors=errors
         )
     
-    async def _execute_step(self, step: Dict[str, Any], user_id: int, telegram_id: int = None) -> MCPOutput:
+    async def _execute_step(self, step: Dict[str, Any], user_id: int, telegram_id: int = None, context: Dict[str, Any] = None) -> MCPOutput:
         """
         Execute a single step.
         
@@ -112,12 +146,34 @@ class AgentExecutor:
             step: Step definition
             user_id: User ID
             telegram_id: Telegram user ID for external integrations
+            context: Context dictionary for cross-step references
             
         Returns:
             MCPOutput from the MCP
         """
+        context = context or {}
         tool_name = step["tool"]
-        parameters = step["parameters"]
+        parameters = step["parameters"].copy()  # Don't modify original
+        
+        # Debug: Log current context
+        if context:
+            logger.debug("executing_step_with_context", context=context, step_tool=tool_name)
+        
+        # Replace template variables (e.g., ${session_id}) with actual values from context
+        import re
+        for key, value in parameters.items():
+            if isinstance(value, str) and "${" in value:
+                # Replace ${variable} with value from context
+                def replace_var(match):
+                    var_name = match.group(1)
+                    replaced_value = str(context.get(var_name, match.group(0)))
+                    logger.debug("replacing_template_var", var_name=var_name, original=match.group(0), replaced=replaced_value)
+                    return replaced_value
+                
+                old_value = value
+                parameters[key] = re.sub(r'\$\{(\w+)\}', replace_var, value)
+                if old_value != parameters[key]:
+                    logger.debug("parameter_substitution", param_key=key, old_value=old_value, new_value=parameters[key])
         
         # Get the MCP
         mcp = self.registry.get(tool_name)
@@ -133,6 +189,10 @@ class AgentExecutor:
             input_data = CalendarInput(**parameters)
         elif tool_name == "ReminderMCP":
             input_data = ReminderInput(**parameters)
+        elif tool_name == "BraveSearchMCP":
+            input_data = BraveSearchInput(**parameters)
+        elif tool_name == "BrowserbaseMCP":
+            input_data = BrowserbaseInput(**parameters)
         else:
             return MCPOutput(
                 status=MCPStatus.FAILURE,

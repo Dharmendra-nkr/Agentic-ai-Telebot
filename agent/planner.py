@@ -365,6 +365,205 @@ class AgentPlanner:
                 }
             })
         
+        elif intent == "browser_navigation":
+            # Extract URL from message
+            import re
+            raw_text = entities.get("raw_text", "")
+            url = None
+            
+            # Try to find URLs in the text
+            url_pattern = r'https?://[^\s]+'
+            url_match = re.search(url_pattern, raw_text)
+            if url_match:
+                url = url_match.group(0)
+            else:
+                # Try to extract domain names (e.g., "google.com", "example.org")
+                domain_pattern = r'(?:https?://)?([a-z0-9]+(?:[.-][a-z0-9]+)*(?:\.[a-z]{2,}))'
+                domain_match = re.search(domain_pattern, raw_text, re.IGNORECASE)
+                if domain_match:
+                    domain = domain_match.group(1)
+                    # Add protocol if missing
+                    if not domain.startswith('http'):
+                        url = f"https://{domain}"
+                    else:
+                        url = domain
+            
+            # Step 1: Create browser session
+            steps.append({
+                "step": 1,
+                "action": "create_session",
+                "tool": "BrowserbaseMCP",
+                "parameters": {
+                    "action": "create_session"
+                }
+            })
+            
+            # Step 2: Navigate if URL found
+            step_num = 2
+            if url:
+                steps.append({
+                    "step": step_num,
+                    "action": "navigate",
+                    "tool": "BrowserbaseMCP",
+                    "parameters": {
+                        "action": "navigate",
+                        "session_id": "${session_id}",  # Reference from previous step
+                        "url": url
+                    }
+                })
+                step_num += 1
+            
+            # Check if the message also contains screenshot keywords
+            screenshot_keywords = ['screenshot', 'capture', 'snap', 'take a picture', 'snap a photo']
+            if any(keyword in raw_text.lower() for keyword in screenshot_keywords):
+                steps.append({
+                    "step": step_num,
+                    "action": "screenshot",
+                    "tool": "BrowserbaseMCP",
+                    "parameters": {
+                        "action": "screenshot",
+                        "session_id": "${session_id}"
+                    }
+                })
+                logger.info("added_screenshot_step", message=raw_text)
+        
+        elif intent == "browser_screenshot":
+            steps.append({
+                "step": 1,
+                "action": "create_session",
+                "tool": "BrowserbaseMCP",
+                "parameters": {
+                    "action": "create_session"
+                }
+            })
+            
+            # Extract URL if present
+            import re
+            raw_text = entities.get("raw_text", "")
+            url_match = re.search(r'https?://[^\s]+', raw_text)
+            
+            if url_match:
+                url = url_match.group(0)
+                steps.append({
+                    "step": 2,
+                    "action": "navigate",
+                    "tool": "BrowserbaseMCP",
+                    "parameters": {
+                        "action": "navigate",
+                        "session_id": "${session_id}",
+                        "url": url
+                    }
+                })
+                
+                steps.append({
+                    "step": 3,
+                    "action": "screenshot",
+                    "tool": "BrowserbaseMCP",
+                    "parameters": {
+                        "action": "screenshot",
+                        "session_id": "${session_id}"
+                    }
+                })
+            else:
+                # Just take screenshot of current page
+                steps.append({
+                    "step": 2,
+                    "action": "screenshot",
+                    "tool": "BrowserbaseMCP",
+                    "parameters": {
+                        "action": "screenshot",
+                        "session_id": "${session_id}"
+                    }
+                })
+        
+        elif intent == "browser_extract":
+            steps.append({
+                "step": 1,
+                "action": "create_session",
+                "tool": "BrowserbaseMCP",
+                "parameters": {
+                    "action": "create_session"
+                }
+            })
+            
+            # Extract URL if present
+            import re
+            raw_text = entities.get("raw_text", "")
+            url = None
+            
+            # Try to find full URLs first
+            url_match = re.search(r'https?://[^\s]+', raw_text)
+            if url_match:
+                url = url_match.group(0)
+            else:
+                # Try to extract domain names (e.g., "google.com", "example.org")
+                domain_pattern = r'(?:https?://)?([a-z0-9]+(?:[.-][a-z0-9]+)*(?:\.[a-z]{2,}))'
+                domain_match = re.search(domain_pattern, raw_text, re.IGNORECASE)
+                if domain_match:
+                    domain = domain_match.group(1)
+                    # Add protocol if missing
+                    if not domain.startswith('http'):
+                        url = f"https://{domain}"
+                    else:
+                        url = domain
+            
+            if url:
+                steps.append({
+                    "step": 2,
+                    "action": "navigate",
+                    "tool": "BrowserbaseMCP",
+                    "parameters": {
+                        "action": "navigate",
+                        "session_id": "${session_id}",
+                        "url": url
+                    }
+                })
+            
+            steps.append({
+                "step": 3 if url else 2,
+                "action": "extract",
+                "tool": "BrowserbaseMCP",
+                "parameters": {
+                    "action": "extract",
+                    "session_id": "${session_id}",
+                    "instruction": raw_text,
+                    "data_format": "json"
+                }
+            })
+        
+        elif intent == "browser_interaction":
+            steps.append({
+                "step": 1,
+                "action": "create_session",
+                "tool": "BrowserbaseMCP",
+                "parameters": {
+                    "action": "create_session"
+                }
+            })
+            
+            # Extract action type and details from message
+            raw_text = entities.get("raw_text", "").lower()
+            action_type = "click"
+            
+            if "type" in raw_text or "enter" in raw_text:
+                action_type = "type"
+            elif "scroll" in raw_text:
+                action_type = "scroll"
+            elif "click" in raw_text or "submit" in raw_text:
+                action_type = "click"
+            
+            steps.append({
+                "step": 2,
+                "action": "act",
+                "tool": "BrowserbaseMCP",
+                "parameters": {
+                    "action": "act",
+                    "session_id": "${session_id}",
+                    "action_type": action_type,
+                    "instruction": entities.get("raw_text", "")
+                }
+            })
+        
         return steps
     
     async def refine_plan_with_llm(self, plan: Plan, conversation_context: List[Dict]) -> Plan:

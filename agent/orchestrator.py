@@ -7,6 +7,7 @@ from typing import Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from openai import AsyncOpenAI
 from anthropic import AsyncAnthropic
+import json
 from config import settings
 from memory.short_term import get_user_memory
 from memory.long_term import LongTermMemory
@@ -175,6 +176,43 @@ class AgentOrchestrator:
         # If execution failed, return error message
         if not execution_result.success:
             return execution_result.message
+        
+        # Check if there's an image file in the results (for screenshots)
+        logger.debug("checking_execution_results", execution_data=execution_result.data)
+        
+        if execution_result.data and isinstance(execution_result.data, dict):
+            results = execution_result.data.get("results", [])
+            logger.debug("found_results", count=len(results))
+            
+            for i, result in enumerate(results):
+                logger.debug(f"result_{i}", result_type=type(result), result_keys=list(result.keys()) if isinstance(result, dict) else "not-dict")
+                
+                if result and isinstance(result, dict):
+                    if "image_file" in result and result["image_file"]:
+                        # Return the file path for the bot to send as photo
+                        logger.info("returning_image_file", image_file=result["image_file"])
+                        return result["image_file"]
+                    if "screenshot_path" in result and result["screenshot_path"]:
+                        logger.info("returning_screenshot_path", path=result["screenshot_path"])
+                        return result["screenshot_path"]
+                    if "extracted_data" in result and result["extracted_data"]:
+                        # Return formatted extracted data
+                        logger.info("returning_extracted_data", data_type=type(result["extracted_data"]))
+                        extracted = result["extracted_data"]
+                        
+                        # Format extracted data for display
+                        if isinstance(extracted, list):
+                            formatted = "📋 **Extracted Data:**\n\n"
+                            for i, item in enumerate(extracted, 1):
+                                if isinstance(item, dict):
+                                    formatted += f"{i}. {json.dumps(item, indent=2)}\n"
+                                else:
+                                    formatted += f"{i}. {item}\n"
+                            return formatted
+                        elif isinstance(extracted, dict):
+                            return f"📋 **Extracted Data:**\n\n{json.dumps(extracted, indent=2)}"
+                        else:
+                            return str(extracted)
         
         # Create prompt for response generation
         prompt = f"""Generate a friendly, conversational response to the user.
