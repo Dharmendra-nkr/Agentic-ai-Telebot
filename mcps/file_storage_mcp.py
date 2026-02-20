@@ -7,6 +7,7 @@ from typing import Optional, Dict, Any
 from pydantic import Field
 from mcps.base import BaseMCP, MCPInput, MCPOutput, MCPStatus, MCPCapability
 from utils.logger import get_logger
+from config import settings
 import os
 from pathlib import Path
 from datetime import datetime
@@ -41,7 +42,7 @@ class FileStorageMCP(BaseMCP):
         """
         super().__init__()
         self.api_key = api_key
-        self.credentials_file = credentials_file or "credentials/google_credentials.json"
+        self.credentials_file = credentials_file or settings.google_drive_credentials_file
         self.base_drive_url = "https://drive.google.com/file/d"
         self.service = None
         
