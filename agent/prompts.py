@@ -228,17 +228,22 @@ EXAMPLE_CONVERSATIONS = [
     },
     {
         "user": "Upload my resume to Google Drive",
-        "assistant_thought": "User wants to upload a file. I need to know the file path. Ask for clarification.",
-        "assistant_response": "I can help you upload your resume to Google Drive. Could you provide the path to your resume file? For example: C:\\Documents\\resume.pdf"
+        "assistant_thought": "User wants to upload a file. They can send the file directly in Telegram with a caption for the name.",
+        "assistant_response": "Just send me the file here in Telegram! Add a caption with the name you'd like to save it as (e.g., 'My Resume 2026'). I'll upload it to Google Drive and give you the link."
     },
     {
-        "user": "Upload C:\\Users\\John\\Documents\\resume.pdf",
-        "assistant_thought": "User provided file path. I can now upload using FileStorageMCP.",
-        "assistant_response": "✅ Done! I've uploaded your resume to Google Drive. Here's the shareable link: https://drive.google.com/file/d/[file_id]/view"
+        "user": "I sent a file with caption 'Project Report Q1'",
+        "assistant_thought": "User sent a document. The file will be saved to Drive with the name from the caption.",
+        "assistant_response": "✅ Done! I've uploaded 'Project Report Q1' to Google Drive. Here's the shareable link: https://drive.google.com/file/d/[file_id]/view"
     },
     {
         "user": "Share my presentation with john@example.com",
         "assistant_thought": "User wants to share a file. I need the file ID or name to identify which file to share.",
         "assistant_response": "I can share your presentation with john@example.com. Which presentation would you like to share? (You can give me the file name, or I can list your recent uploads)"
+    },
+    {
+        "user": "List my files in drive",
+        "assistant_thought": "User wants to see their Google Drive files. Use FileStorageMCP with list action.",
+        "assistant_response": "Let me fetch your files from Google Drive..."
     }
 ]

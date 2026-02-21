@@ -9,8 +9,6 @@ from mcps.registry import get_registry
 from mcps.base import MCPOutput, MCPStatus
 from mcps.calendar_mcp import CalendarMCP, CalendarInput
 from mcps.reminder_mcp import ReminderMCP, ReminderInput
-from mcps.brave_search_mcp import BraveSearchMCP, BraveSearchInput
-from mcps.browserbase_mcp import BrowserbaseMCP, BrowserbaseInput
 from mcps.file_storage_mcp import FileStorageMCP, FileStorageInput
 from agent.planner import Plan
 from config import settings
@@ -54,28 +52,12 @@ class AgentExecutor:
         self.calendar_mcp = CalendarMCP(db)
         self.reminder_mcp = ReminderMCP(db, scheduler=scheduler)
         
-        # Initialize Brave Search MCP if enabled
-        self.brave_search_mcp = None
-        if settings.enable_brave_search and settings.brave_search_api_key:
-            self.brave_search_mcp = BraveSearchMCP(api_key=settings.brave_search_api_key)
-            logger.info("brave_search_mcp_enabled")
-        
-        # Initialize Browserbase MCP if enabled
-        self.browserbase_mcp = None
-        if settings.enable_browserbase and settings.browserbase_api_key:
-            self.browserbase_mcp = BrowserbaseMCP(api_key=settings.browserbase_api_key)
-            logger.info("browserbase_mcp_enabled")
-        
         # Initialize File Storage MCP
         self.file_storage_mcp = FileStorageMCP()
         
         # Register MCPs
         self.registry.register(self.calendar_mcp)
         self.registry.register(self.reminder_mcp)
-        if self.brave_search_mcp:
-            self.registry.register(self.brave_search_mcp)
-        if self.browserbase_mcp:
-            self.registry.register(self.browserbase_mcp)
         self.registry.register(self.file_storage_mcp)
         
         logger.info("agent_executor_initialized", registered_mcps=len(self.registry.list_mcps()))
@@ -194,12 +176,10 @@ class AgentExecutor:
             input_data = CalendarInput(**parameters)
         elif tool_name == "ReminderMCP":
             input_data = ReminderInput(**parameters)
-        elif tool_name == "BraveSearchMCP":
-            input_data = BraveSearchInput(**parameters)
-        elif tool_name == "BrowserbaseMCP":
-            input_data = BrowserbaseInput(**parameters)
         elif tool_name == "FileStorageMCP":
-            input_data = FileStorageInput(**parameters)
+            # Remove None values so Pydantic defaults apply
+            clean_params = {k: v for k, v in parameters.items() if v is not None}
+            input_data = FileStorageInput(**clean_params)
         else:
             return MCPOutput(
                 status=MCPStatus.FAILURE,

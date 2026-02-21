@@ -94,13 +94,13 @@ class IntentExtractor:
         'create_reminder': ['remind', 'reminder', 'alert', 'notify'],
         'create_note': ['note', 'write down', 'remember', 'jot down'],
         'create_task': ['task', 'todo', 'to-do', 'need to do'],
+        'file_upload': ['upload', 'store', 'save to drive', 'upload to drive', 'put in drive'],
+        'file_list': ['files in drive', 'my files', 'drive files', 'list files', 'show files', 'list my files'],
+        'file_link': ['drive link', 'file link', 'shareable link', 'share link', 'get link', 'get the link', 'link for', 'link of'],
+        'file_share': ['share file', 'share document', 'share with'],
         'query_events': ['what', 'when', 'show', 'list', 'upcoming'],
         'cancel': ['cancel', 'delete', 'remove'],
         'update': ['change', 'update', 'modify', 'reschedule'],
-        'browser_navigation': ['navigate', 'go to', 'visit', 'open', 'browse', 'access', 'surf'],
-        'browser_extract': ['extract', 'scrape', 'get', 'find', 'pull', 'fetch', 'collect data'],
-        'browser_screenshot': ['screenshot', 'capture', 'snap', 'take a picture', 'snap a photo'],
-        'browser_interaction': ['click', 'type', 'fill', 'submit', 'scroll', 'search'],
     }
     
     def extract_intent(self, text: str) -> str:

@@ -4,12 +4,15 @@ Handles incoming messages and sends responses.
 """
 
 from typing import Optional
+import os
+import tempfile
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from sqlalchemy.ext.asyncio import AsyncSession
 from config import settings
 from memory.models import get_db
 from agent.orchestrator import AgentOrchestrator
+from mcps.file_storage_mcp import FileStorageMCP, FileStorageInput
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -23,6 +26,7 @@ class TelegramBot:
         self.token = settings.telegram_bot_token
         self.application: Optional[Application] = None
         self.scheduler = scheduler
+        self.file_storage_mcp = FileStorageMCP()
         logger.info("telegram_bot_initialized")
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -72,6 +76,74 @@ How can I help you today?"""
 Just talk to me naturally - I'll understand! 😊"""
         
         await update.message.reply_text(help_message, parse_mode='Markdown')
+    
+    async def handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle incoming document/file messages.
+        Downloads the file and uploads to Google Drive with user-specified name.
+        """
+        user = update.effective_user
+        document = update.message.document
+        caption = update.message.caption  # User's desired file name
+        
+        if not document:
+            await update.message.reply_text("No document found in the message.")
+            return
+        
+        # Check if user is allowed
+        if settings.allowed_users and user.id not in settings.allowed_users:
+            await update.message.reply_text(
+                "Sorry, you don't have access to this bot. Please contact the administrator."
+            )
+            return
+        
+        await update.message.chat.send_action("upload_document")
+        
+        try:
+            # Download the file from Telegram
+            file = await context.bot.get_file(document.file_id)
+            original_name = document.file_name or "unnamed_file"
+            
+            # Create temp directory for download
+            temp_dir = tempfile.mkdtemp()
+            temp_path = os.path.join(temp_dir, original_name)
+            await file.download_to_drive(temp_path)
+            
+            # Determine the file name: use caption if provided, otherwise original name
+            if caption and caption.strip():
+                user_name = caption.strip()
+            else:
+                user_name = None  # Will use original filename
+            
+            logger.info("document_received",
+                       user_id=user.id, original_name=original_name,
+                       user_name=user_name, file_size=document.file_size)
+            
+            # Upload to Google Drive via FileStorageMCP
+            input_data = FileStorageInput(
+                action="upload",
+                file_path=temp_path,
+                file_name=user_name
+            )
+            
+            result = await self.file_storage_mcp.execute(input_data, user_id=user.id)
+            
+            # Clean up temp file
+            try:
+                os.remove(temp_path)
+                os.rmdir(temp_dir)
+            except Exception:
+                pass
+            
+            # Send result to user
+            await update.message.reply_text(result.message)
+            logger.info("document_processed", user_id=user.id, status=result.status)
+            
+        except Exception as e:
+            logger.error("document_handling_error", error=str(e), user_id=user.id)
+            await update.message.reply_text(
+                f"Sorry, I couldn't process your file. Error: {str(e)}"
+            )
     
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -146,7 +218,10 @@ Just talk to me naturally - I'll understand! 😊"""
         self.application.add_handler(CommandHandler("start", self.start_command))
         self.application.add_handler(CommandHandler("help", self.help_command))
         
-        # Message handler
+        # Message handlers
+        self.application.add_handler(
+            MessageHandler(filters.Document.ALL, self.handle_document)
+        )
         self.application.add_handler(
             MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message)
         )

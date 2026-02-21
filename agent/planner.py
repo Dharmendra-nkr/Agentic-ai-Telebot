@@ -355,6 +355,62 @@ class AgentPlanner:
                 }
             })
         
+        elif intent == "file_upload":
+            steps.append({
+                "step": 1,
+                "action": "upload",
+                "tool": "FileStorageMCP",
+                "parameters": {
+                    "action": "upload",
+                    "file_path": entities.get("file_path"),
+                    "file_name": entities.get("file_name") or entities.get("title")
+                }
+            })
+        
+        elif intent == "file_list":
+            steps.append({
+                "step": 1,
+                "action": "list",
+                "tool": "FileStorageMCP",
+                "parameters": {
+                    "action": "list"
+                }
+            })
+        
+        elif intent == "file_link":
+            # Extract file name from entities or parse from raw text
+            file_name = entities.get("title") or entities.get("file_name")
+            if not file_name:
+                import re
+                raw = entities.get("raw_text", "")
+                match = re.search(r'(?:link\s+(?:for|of)\s+)(.+)', raw, re.IGNORECASE)
+                if match:
+                    file_name = match.group(1).strip()
+            
+            steps.append({
+                "step": 1,
+                "action": "get_link",
+                "tool": "FileStorageMCP",
+                "parameters": {
+                    "action": "get_link",
+                    "file_id": entities.get("file_id"),
+                    "file_name": file_name
+                }
+            })
+        
+        elif intent == "file_share":
+            steps.append({
+                "step": 1,
+                "action": "share",
+                "tool": "FileStorageMCP",
+                "parameters": {
+                    "action": "share",
+                    "file_id": entities.get("file_id"),
+                    "share_with": entities.get("share_with"),
+                    "access_level": entities.get("access_level", "viewer")
+                }
+            })
+        
         elif intent == "query_reminders":
             steps.append({
                 "step": 1,

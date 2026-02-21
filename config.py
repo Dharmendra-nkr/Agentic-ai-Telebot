@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     google_redirect_uri: str = Field(default="http://localhost:8000/auth/google/callback")
     google_credentials_file: str = Field(default="credentials/google_credentials.json")
     
+    # Google Drive File Storage
+    google_drive_credentials_file: str = Field(default="credentials/google_drive_credentials.json")
+    google_drive_enabled: bool = Field(default=True)
+    
     # Brave Search API
     brave_search_api_key: Optional[str] = Field(default=None, description="Brave Search API key")
     enable_brave_search: bool = Field(default=True, description="Enable Brave Search MCP")
@@ -153,8 +157,12 @@ class Settings(BaseSettings):
         return self.telegram_webhook_url is not None
     
     def get_credentials_path(self) -> Path:
-        """Get the path to Google credentials file."""
+        """Get the path to Google Calendar credentials file."""
         return Path(self.google_credentials_file)
+    
+    def get_drive_credentials_path(self) -> Path:
+        """Get the path to Google Drive credentials file."""
+        return Path(self.google_drive_credentials_file)
 
 
 # Global settings instance
