@@ -99,19 +99,7 @@ python main.py
 "Share resume.pdf with john@gmail.com"
 "Delete notes.txt"
 ```
-
-### Calendar
-```
-"Schedule a meeting tomorrow at 3 PM"
-"What's on my calendar?"
-```
-
-### Reminders
-```
-"Remind me to drink water in 5 minutes"
-"Set a reminder for lunch at 1 PM"
-"Show my reminders"
-```
+``
 
 ### File Upload
 Send any document to the bot via Telegram. Add a **caption** to name the file:
