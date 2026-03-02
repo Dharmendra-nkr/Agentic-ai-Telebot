@@ -1,6 +1,6 @@
 # Marvis — AI-Powered Google Drive Manager
 
-An intelligent Telegram bot that manages your **Google Drive files**, **calendar events**, and **reminders** through natural conversation. Powered by Groq's Llama 3.3 70B and built with an autonomous MCP (Model Context Protocol) agent architecture.
+An intelligent Telegram bot that manages your **Google Drive files**  through natural conversation. Powered by Groq's Llama 3.3 70B and built with an autonomous MCP (Model Context Protocol) agent architecture.
 
 ## 📸 Screenshots
 
@@ -19,16 +19,6 @@ An intelligent Telegram bot that manages your **Google Drive files**, **calendar
 - **Share files** — Share a file with anyone by email (viewer / commenter / editor)
 - **Delete files** — Remove files from Drive by name
 
-### 📅 Google Calendar
-- **Create events** — "Schedule a meeting tomorrow at 3 PM"
-- **View calendar** — "What's on my calendar today?"
-
-### ⏰ Smart Reminders
-- **Relative time** — "Remind me in 30 minutes"
-- **Absolute time** — "Set a reminder for 5 PM"
-- **View reminders** — "Show my reminders"
-
-### 🧠 Intelligent Routing
 - Natural language intent classification routes every message to the correct MCP
 - No slash commands needed — just talk naturally
 - Context-aware entity extraction (file names, dates, emails)
