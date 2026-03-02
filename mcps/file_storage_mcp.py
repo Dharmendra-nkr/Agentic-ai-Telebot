@@ -23,7 +23,7 @@ class FileStorageInput(MCPInput):
     """Input parameters for file storage operations."""
     action: str = Field(
         ...,
-        description="Action: upload, list, get_link, share"
+        description="Action: upload, list, get_link, share, delete"
     )
     file_path: Optional[str] = Field(default=None, description="Local file path to upload")
     file_name: Optional[str] = Field(default=None, description="Name for the file in storage")
@@ -164,6 +164,8 @@ class FileStorageMCP(BaseMCP):
             return await self._get_file_link(input_data, user_id)
         elif action == "share":
             return await self._share_file(input_data, user_id)
+        elif action == "delete":
+            return await self._delete_file(input_data, user_id)
         else:
             return MCPOutput(
                 status=MCPStatus.FAILURE,
@@ -487,9 +489,70 @@ class FileStorageMCP(BaseMCP):
                 error=str(e)
             )
     
+    async def _delete_file(self, input_data: FileStorageInput, user_id: int) -> MCPOutput:
+        """Delete a file from Google Drive. Supports lookup by file_id or file_name."""
+        if not input_data.file_id and not input_data.file_name:
+            return MCPOutput(
+                status=MCPStatus.FAILURE,
+                message="Please provide a file name or file ID to delete.",
+                error="Missing file_id and file_name"
+            )
+        
+        try:
+            if self.service or self._try_build_service():
+                file_id = input_data.file_id
+                file_name_found = None
+                
+                # If no file_id, search by file name
+                if not file_id and input_data.file_name:
+                    query = f"name contains '{input_data.file_name}' and trashed = false"
+                    results = self.service.files().list(
+                        q=query,
+                        pageSize=5,
+                        fields="files(id, name)"
+                    ).execute()
+                    files = results.get('files', [])
+                    
+                    if not files:
+                        return MCPOutput(
+                            status=MCPStatus.FAILURE,
+                            message=f"No file found matching '{input_data.file_name}' in Google Drive.",
+                            error="File not found"
+                        )
+                    
+                    file_id = files[0]['id']
+                    file_name_found = files[0]['name']
+                
+                # Delete the file (moves to trash)
+                self.service.files().delete(fileId=file_id).execute()
+                
+                name = file_name_found or input_data.file_name or file_id
+                logger.info("file_storage_deleted",
+                           user_id=user_id, file_id=file_id, file_name=name)
+                
+                return MCPOutput(
+                    status=MCPStatus.SUCCESS,
+                    message=f"🗑️ File '{name}' has been deleted from Google Drive.",
+                    data={"file_id": file_id, "file_name": name, "deleted": True}
+                )
+            else:
+                return MCPOutput(
+                    status=MCPStatus.FAILURE,
+                    message="Google Drive not authenticated. Run: python auth_drive.py",
+                    error="Not authenticated"
+                )
+        
+        except Exception as e:
+            logger.error("file_storage_delete_error", error=str(e))
+            return MCPOutput(
+                status=MCPStatus.FAILURE,
+                message=f"Failed to delete file: {str(e)}",
+                error=str(e)
+            )
+    
     def get_description(self) -> str:
         """Get MCP description."""
-        return "File storage and Google Drive integration for uploading, sharing, and managing files"
+        return "File storage and Google Drive integration for uploading, sharing, deleting, and managing files"
     
     def get_capabilities(self) -> list:
         """Get MCP capabilities."""
@@ -513,5 +576,10 @@ class FileStorageMCP(BaseMCP):
                 name="share",
                 description="Share file with another user",
                 parameters=["file_id", "share_with", "access_level"]
+            ),
+            MCPCapability(
+                name="delete",
+                description="Delete a file from Google Drive by name or ID",
+                parameters=["file_id", "file_name"]
             )
         ]

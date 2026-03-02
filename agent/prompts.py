@@ -100,19 +100,30 @@ def get_intent_classification_prompt(message: str) -> str:
         Intent classification prompt
     """
     return f"""Classify the intent of the following user message. Choose from:
-- create_event: User wants to create a calendar event
-- create_reminder: User wants to set a reminder
-- create_note: User wants to save a note
-- create_task: User wants to create a task
-- query_events: User wants to see their calendar
-- query_reminders: User wants to see their reminders
+
+**Calendar:**
+- create_event: User wants to create a calendar event, meeting, or appointment
+- query_events: User wants to see/check their calendar or upcoming events
+
+**Reminders:**
+- create_reminder: User wants to set a reminder or alert
+- query_reminders: User wants to see their current reminders
+
+**Google Drive / File Storage:**
+- file_upload: User wants to upload/store a file in Google Drive
+- file_list: User wants to see their files in Google Drive
+- file_link: User wants a shareable link for a specific file
+- file_share: User wants to share a file with someone (by email)
+- file_delete: User wants to delete a file from Google Drive
+
+**Other:**
 - cancel: User wants to cancel/delete something
-- update: User wants to modify something
+- update: User wants to modify/reschedule something
 - general_query: General question or conversation
 
-User message: "{message}"
+User message: \"{message}\"
 
-Respond with just the intent name."""
+Respond with just the intent name, nothing else."""
 
 
 def get_entity_extraction_prompt(message: str, intent: str) -> str:
@@ -139,25 +150,25 @@ When parsing dates, use {current_year} as the year unless explicitly stated othe
 Intent: {intent}
 Message: "{message}"
 
-Extract and return a JSON object with these fields (set to null if not found):
-- title: Event/reminder/task title
-- datetime: ISO 8601 datetime string (use year {current_year} for relative dates like "tomorrow", "next week", etc.)
+Based on the intent, extract the appropriate fields:
+
+**For calendar/reminder intents** (create_event, create_reminder, query_events, query_reminders):
+- title: Event/reminder title
+- datetime: ISO 8601 datetime string (use year {current_year})
 - duration: Duration in minutes
 - location: Location (for events)
 - description: Additional details
 - reminder_before: How long before to remind (in minutes)
 
-Example output for a message on {current_date_str}:
-{{
-  "title": "Dentist appointment",
-  "datetime": "{current_year}-03-01T08:00:00",
-  "duration": 60,
-  "location": null,
-  "description": null,
-  "reminder_before": 60
-}}
+**For file intents** (file_upload, file_list, file_link, file_share):
+- file_name: Name of the file being referenced
+- file_id: Google Drive file ID (if known)
+- share_with: Email address to share with (for file_share)
+- access_level: viewer, commenter, or editor (for file_share, default: viewer)
 
-Respond with only the JSON object."""
+Set any unmentioned field to null.
+
+Respond with only the JSON object, no extra text."""
 
 
 def get_planning_prompt(intent: str, entities: Dict[str, Any], conversation_context: List[Dict]) -> str:

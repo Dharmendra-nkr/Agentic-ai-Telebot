@@ -88,38 +88,104 @@ class DateTimeParser:
 class IntentExtractor:
     """Extract intent and entities from user messages."""
     
-    # Intent keywords mapping
-    INTENT_KEYWORDS = {
-        'create_event': ['schedule', 'appointment', 'meeting', 'event', 'save the date', 'book'],
-        'create_reminder': ['remind', 'reminder', 'alert', 'notify'],
-        'create_note': ['note', 'write down', 'remember', 'jot down'],
-        'create_task': ['task', 'todo', 'to-do', 'need to do'],
-        'file_upload': ['upload', 'store', 'save to drive', 'upload to drive', 'put in drive'],
-        'file_list': ['files in drive', 'my files', 'drive files', 'list files', 'show files', 'list my files'],
-        'file_link': ['drive link', 'file link', 'shareable link', 'share link', 'get link', 'get the link', 'link for', 'link of'],
-        'file_share': ['share file', 'share document', 'share with'],
-        'query_events': ['what', 'when', 'show', 'list', 'upcoming'],
-        'cancel': ['cancel', 'delete', 'remove'],
-        'update': ['change', 'update', 'modify', 'reschedule'],
-    }
+    # High-priority intents checked first (order matters)
+    # More specific patterns are checked before generic ones
+    INTENT_RULES = [
+        # --- File Storage (checked first — most specific) ---
+        ('file_list', [
+            'files in drive', 'my files', 'drive files', 'list files',
+            'show files', 'list my files', 'files on drive',
+            'what files', 'show my drive', 'whats in my drive', 'whats in drive'
+        ]),
+        ('file_link', [
+            'drive link', 'file link', 'shareable link', 'share link',
+            'get link', 'get the link', 'link for', 'link of',
+            'send me the link', 'give me the link', 'send link'
+        ]),
+        ('file_share', [
+            'share file', 'share document', 'share with', 'share this file',
+            'share it with', 'send file to', 'give access', 'share this'
+        ]),
+        ('file_delete', [
+            'delete file', 'delete from drive', 'remove file', 'remove from drive',
+            'trash file', 'delete the file', 'delete this file',
+            'remove this file', 'delete it from drive'
+        ]),
+        ('file_upload', [
+            'upload', 'store in drive', 'save to drive', 'upload to drive',
+            'put in drive', 'save in drive', 'store file', 'store document'
+        ]),
+
+        # --- Reminder queries (BEFORE create_reminder so "my reminders" matches here) ---
+        ('query_reminders', [
+            'my reminders', 'show reminders', 'list reminders',
+            'pending reminders', 'active reminders', 'view reminders',
+            'what reminders', 'check reminders'
+        ]),
+
+        # --- Calendar queries (BEFORE create_event so "my calendar" matches here) ---
+        ('query_events', [
+            'my calendar', 'on my calendar', 'calendar for',
+            'whats on', "what's on", 'upcoming events', 'events today',
+            'events tomorrow', 'show calendar', 'check calendar',
+            'any events', 'any meetings', 'show my calendar'
+        ]),
+
+        # --- Calendar create ---
+        ('create_event', [
+            'schedule', 'appointment', 'meeting', 'event',
+            'save the date', 'book', 'calendar event', 'add to calendar'
+        ]),
+
+        # --- Reminder create ---
+        ('create_reminder', [
+            'remind', 'reminder', 'alert me', 'notify me',
+            'remind me', 'set a reminder', 'set reminder', 'don\'t forget'
+        ]),
+
+        # --- Meta actions (use specific phrases to avoid clashing with file_delete) ---
+        ('cancel', [
+            'cancel', 'cancel event', 'cancel meeting', 'cancel reminder',
+            'cancel appointment', 'delete event', 'delete meeting',
+            'delete reminder', 'delete appointment', 'remove event',
+            'remove meeting', 'remove reminder', 'remove appointment'
+        ]),
+        ('update', ['change', 'update', 'modify', 'reschedule', 'edit']),
+    ]
     
     def extract_intent(self, text: str) -> str:
         """
         Extract primary intent from user message.
+        Uses ordered rules so specific intents match before generic ones.
         
         Args:
             text: User message
             
         Returns:
-            Intent string (e.g., 'create_event', 'create_reminder')
+            Intent string (e.g., 'create_event', 'file_list')
         """
         text_lower = text.lower()
         
-        # Check for intent keywords
-        for intent, keywords in self.INTENT_KEYWORDS.items():
+        # Check rules in priority order
+        for intent, keywords in self.INTENT_RULES:
             if any(keyword in text_lower for keyword in keywords):
                 logger.info("extracted_intent", text=text, intent=intent)
                 return intent
+        
+        # Regex fallbacks for patterns that keyword matching can't catch
+        import re
+        # "delete/remove <filename> from drive" — file has words between verb and "from drive"
+        if re.search(r'\b(?:delete|remove|trash)\b.+\b(?:from\s+(?:my\s+)?drive|in\s+drive)\b', text_lower):
+            logger.info("extracted_intent", text=text, intent='file_delete')
+            return 'file_delete'
+        
+        # "delete <something>" / "remove <something>" — likely file delete when no calendar/reminder context
+        calendar_words = {'event', 'meeting', 'appointment', 'reminder', 'schedule', 'calendar'}
+        if re.search(r'\b(?:delete|remove|trash)\b\s+\S+', text_lower):
+            # Only route to file_delete if no calendar/reminder words present
+            if not any(w in text_lower for w in calendar_words):
+                logger.info("extracted_intent", text=text, intent='file_delete')
+                return 'file_delete'
         
         # Default to general query
         return 'general_query'

@@ -125,6 +125,10 @@ class AgentPlanner:
         
         # Use nlp_entities as the initial set of entities
         entities = nlp_entities
+        
+        # Always store the raw message text for downstream steps (e.g., file name extraction)
+        entities["raw_text"] = message
+        
         logger.info("extracted_entities", entities=entities)
         
         # Enhance with LLM if needed
@@ -136,6 +140,9 @@ class AgentPlanner:
                 # Don't override datetime if we calculated it from duration
                 if k == 'datetime' and nlp_entities.get('duration'):
                     continue  # Keep our calculated datetime
+                # Don't override raw_text
+                if k == 'raw_text':
+                    continue
                 if v is not None:
                     entities[k] = v
         
@@ -166,8 +173,11 @@ class AgentPlanner:
                 )
                 content = response.content[0].text
             
-            # Parse JSON response
-            entities = json.loads(content)
+            # Parse JSON response — Groq sometimes wraps JSON in markdown or adds text
+            entities = self._parse_json_response(content)
+            if entities is None:
+                logger.warning("llm_entity_extraction_no_json", content=content[:200])
+                return {}
             
             # Handle relative time expressions (e.g., "in 2 minutes", "in 1 hour")
             # Check if there's a duration but no valid datetime
@@ -220,6 +230,42 @@ class AgentPlanner:
         except Exception as e:
             logger.error("llm_entity_extraction_failed", error=str(e))
             return {}
+    
+    @staticmethod
+    def _parse_json_response(content: str) -> dict | None:
+        """
+        Robustly parse JSON from LLM response.
+        Handles: raw JSON, markdown-wrapped JSON (```json ... ```), or JSON buried in text.
+        """
+        if not content or not content.strip():
+            return None
+        
+        content = content.strip()
+        
+        # 1. Try direct parse
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            pass
+        
+        # 2. Try extracting from markdown code block
+        import re
+        md_match = re.search(r'```(?:json)?\s*\n?(.*?)\n?\s*```', content, re.DOTALL)
+        if md_match:
+            try:
+                return json.loads(md_match.group(1).strip())
+            except json.JSONDecodeError:
+                pass
+        
+        # 3. Try finding first { ... } block
+        brace_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', content, re.DOTALL)
+        if brace_match:
+            try:
+                return json.loads(brace_match.group(0))
+            except json.JSONDecodeError:
+                pass
+        
+        return None
     
     async def create_plan(self, intent: str, entities: Dict[str, Any], 
                          conversation_context: List[Dict] = None) -> Plan:
@@ -277,6 +323,12 @@ class AgentPlanner:
             if not entities.get("title") and not entities.get("description"):
                 missing.append("content")
         
+        elif intent == "file_share":
+            if not entities.get("share_with"):
+                missing.append("share_with")
+            if not entities.get("file_name") and not entities.get("file_id"):
+                missing.append("file_name")
+        
         return missing
     
     def _generate_clarifying_questions(self, intent: str, missing_info: List[str]) -> List[str]:
@@ -289,7 +341,9 @@ class AgentPlanner:
             "duration": "How long will it last?",
             "location": "Where will this take place?",
             "reminder_before": "How long before should I remind you?",
-            "content": "What would you like to save?"
+            "content": "What would you like to save?",
+            "share_with": "Which email address should I share the file with?",
+            "file_name": "Which file are you referring to?"
         }
         
         for info in missing_info:
@@ -411,6 +465,27 @@ class AgentPlanner:
                 }
             })
         
+        elif intent == "file_delete":
+            # Extract file name from entities or parse from raw text
+            file_name = entities.get("file_name") or entities.get("title")
+            if not file_name:
+                import re
+                raw = entities.get("raw_text", "")
+                match = re.search(r'(?:delete|remove|trash)\s+(?:the\s+)?(?:file\s+)?(.+?)(?:\s+from\s+drive)?$', raw, re.IGNORECASE)
+                if match:
+                    file_name = match.group(1).strip()
+            
+            steps.append({
+                "step": 1,
+                "action": "delete",
+                "tool": "FileStorageMCP",
+                "parameters": {
+                    "action": "delete",
+                    "file_id": entities.get("file_id"),
+                    "file_name": file_name
+                }
+            })
+        
         elif intent == "query_reminders":
             steps.append({
                 "step": 1,
@@ -418,205 +493,6 @@ class AgentPlanner:
                 "tool": "ReminderMCP",
                 "parameters": {
                     "action": "list"
-                }
-            })
-        
-        elif intent == "browser_navigation":
-            # Extract URL from message
-            import re
-            raw_text = entities.get("raw_text", "")
-            url = None
-            
-            # Try to find URLs in the text
-            url_pattern = r'https?://[^\s]+'
-            url_match = re.search(url_pattern, raw_text)
-            if url_match:
-                url = url_match.group(0)
-            else:
-                # Try to extract domain names (e.g., "google.com", "example.org")
-                domain_pattern = r'(?:https?://)?([a-z0-9]+(?:[.-][a-z0-9]+)*(?:\.[a-z]{2,}))'
-                domain_match = re.search(domain_pattern, raw_text, re.IGNORECASE)
-                if domain_match:
-                    domain = domain_match.group(1)
-                    # Add protocol if missing
-                    if not domain.startswith('http'):
-                        url = f"https://{domain}"
-                    else:
-                        url = domain
-            
-            # Step 1: Create browser session
-            steps.append({
-                "step": 1,
-                "action": "create_session",
-                "tool": "BrowserbaseMCP",
-                "parameters": {
-                    "action": "create_session"
-                }
-            })
-            
-            # Step 2: Navigate if URL found
-            step_num = 2
-            if url:
-                steps.append({
-                    "step": step_num,
-                    "action": "navigate",
-                    "tool": "BrowserbaseMCP",
-                    "parameters": {
-                        "action": "navigate",
-                        "session_id": "${session_id}",  # Reference from previous step
-                        "url": url
-                    }
-                })
-                step_num += 1
-            
-            # Check if the message also contains screenshot keywords
-            screenshot_keywords = ['screenshot', 'capture', 'snap', 'take a picture', 'snap a photo']
-            if any(keyword in raw_text.lower() for keyword in screenshot_keywords):
-                steps.append({
-                    "step": step_num,
-                    "action": "screenshot",
-                    "tool": "BrowserbaseMCP",
-                    "parameters": {
-                        "action": "screenshot",
-                        "session_id": "${session_id}"
-                    }
-                })
-                logger.info("added_screenshot_step", message=raw_text)
-        
-        elif intent == "browser_screenshot":
-            steps.append({
-                "step": 1,
-                "action": "create_session",
-                "tool": "BrowserbaseMCP",
-                "parameters": {
-                    "action": "create_session"
-                }
-            })
-            
-            # Extract URL if present
-            import re
-            raw_text = entities.get("raw_text", "")
-            url_match = re.search(r'https?://[^\s]+', raw_text)
-            
-            if url_match:
-                url = url_match.group(0)
-                steps.append({
-                    "step": 2,
-                    "action": "navigate",
-                    "tool": "BrowserbaseMCP",
-                    "parameters": {
-                        "action": "navigate",
-                        "session_id": "${session_id}",
-                        "url": url
-                    }
-                })
-                
-                steps.append({
-                    "step": 3,
-                    "action": "screenshot",
-                    "tool": "BrowserbaseMCP",
-                    "parameters": {
-                        "action": "screenshot",
-                        "session_id": "${session_id}"
-                    }
-                })
-            else:
-                # Just take screenshot of current page
-                steps.append({
-                    "step": 2,
-                    "action": "screenshot",
-                    "tool": "BrowserbaseMCP",
-                    "parameters": {
-                        "action": "screenshot",
-                        "session_id": "${session_id}"
-                    }
-                })
-        
-        elif intent == "browser_extract":
-            steps.append({
-                "step": 1,
-                "action": "create_session",
-                "tool": "BrowserbaseMCP",
-                "parameters": {
-                    "action": "create_session"
-                }
-            })
-            
-            # Extract URL if present
-            import re
-            raw_text = entities.get("raw_text", "")
-            url = None
-            
-            # Try to find full URLs first
-            url_match = re.search(r'https?://[^\s]+', raw_text)
-            if url_match:
-                url = url_match.group(0)
-            else:
-                # Try to extract domain names (e.g., "google.com", "example.org")
-                domain_pattern = r'(?:https?://)?([a-z0-9]+(?:[.-][a-z0-9]+)*(?:\.[a-z]{2,}))'
-                domain_match = re.search(domain_pattern, raw_text, re.IGNORECASE)
-                if domain_match:
-                    domain = domain_match.group(1)
-                    # Add protocol if missing
-                    if not domain.startswith('http'):
-                        url = f"https://{domain}"
-                    else:
-                        url = domain
-            
-            if url:
-                steps.append({
-                    "step": 2,
-                    "action": "navigate",
-                    "tool": "BrowserbaseMCP",
-                    "parameters": {
-                        "action": "navigate",
-                        "session_id": "${session_id}",
-                        "url": url
-                    }
-                })
-            
-            steps.append({
-                "step": 3 if url else 2,
-                "action": "extract",
-                "tool": "BrowserbaseMCP",
-                "parameters": {
-                    "action": "extract",
-                    "session_id": "${session_id}",
-                    "instruction": raw_text,
-                    "data_format": "json"
-                }
-            })
-        
-        elif intent == "browser_interaction":
-            steps.append({
-                "step": 1,
-                "action": "create_session",
-                "tool": "BrowserbaseMCP",
-                "parameters": {
-                    "action": "create_session"
-                }
-            })
-            
-            # Extract action type and details from message
-            raw_text = entities.get("raw_text", "").lower()
-            action_type = "click"
-            
-            if "type" in raw_text or "enter" in raw_text:
-                action_type = "type"
-            elif "scroll" in raw_text:
-                action_type = "scroll"
-            elif "click" in raw_text or "submit" in raw_text:
-                action_type = "click"
-            
-            steps.append({
-                "step": 2,
-                "action": "act",
-                "tool": "BrowserbaseMCP",
-                "parameters": {
-                    "action": "act",
-                    "session_id": "${session_id}",
-                    "action_type": action_type,
-                    "instruction": entities.get("raw_text", "")
                 }
             })
         
