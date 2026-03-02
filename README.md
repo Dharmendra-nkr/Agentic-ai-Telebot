@@ -2,6 +2,14 @@
 
 An intelligent Telegram bot that manages your **Google Drive files**, **calendar events**, and **reminders** through natural conversation. Powered by Groq's Llama 3.3 70B and built with an autonomous MCP (Model Context Protocol) agent architecture.
 
+## 📸 Screenshots
+
+<p align="center">
+  <img src="Screenshots/1.jpeg" alt="Screenshot 1" width="350"/>
+  &nbsp;&nbsp;
+  <img src="Screenshots/2.jpeg" alt="Screenshot 2" width="350"/>
+</p>
+
 ## 🌟 Features
 
 ### 📁 Google Drive Management
